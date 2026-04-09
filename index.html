@@ -4,25 +4,23 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
-<title>Oil Oracle Data Source Availability</title>
+<title>Oil Oracle — Data Source Availability</title>
 <style>
   :root {
     --color-background-primary: #ffffff;
-    --color-background-secondary: #f5f5f8;
-    --color-text-primary: #1a1a2e;
-    --color-text-secondary: #6b6b80;
+    --color-background-secondary: #f3f4f6;
+    --color-text-primary: #111118;
+    --color-text-secondary: #555566;
     --color-text-tertiary: #9999aa;
     --color-border-primary: #ccccdd;
-    --color-border-secondary: #ddddee;
+    --color-border-secondary: #e0e0ea;
     --color-border-tertiary: #e8e8f0;
   }
-
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif; background: var(--color-background-primary); color: var(--color-text-primary); padding: 24px 20px; }
   .title { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
   .subtitle { font-size: 12px; color: var(--color-text-secondary); margin-bottom: 16px; }
-
-  .tab-row { display: flex; gap: 8px; margin-bottom: 20px; }
+  .controls { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
   .tab { padding: 9px 22px; font-size: 13px; font-weight: 500; cursor: pointer; border-radius: 8px; user-select: none; border: 2px solid var(--color-border-secondary); background: var(--color-background-secondary); color: var(--color-text-secondary); transition: all 0.15s; display: flex; align-items: center; gap: 8px; }
   .tab .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: var(--color-border-secondary); transition: background 0.15s; }
   .tab.active.wd { background: #052e16; border-color: #16a34a; color: #4ade80; }
@@ -30,403 +28,308 @@
   .tab.active.we { background: #1f0505; border-color: #ef4444; color: #f87171; }
   .tab.active.we .dot { background: #f87171; }
   .tab:hover:not(.active) { border-color: var(--color-border-primary); color: var(--color-text-primary); }
-
-  #info-panel { display: none; }
-
-  #tooltip {
-    position: fixed;
-    pointer-events: none;
-    z-index: 999;
-    max-width: 300px;
-    background: #1a1a24;
-    border: 1px solid #333344;
-    border-radius: 10px;
-    padding: 12px 14px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-    opacity: 0;
-    transition: opacity 0.1s;
-  }
-  #tooltip.visible { opacity: 1; }
-  #tt-source { font-size: 12px; font-weight: 500; margin-bottom: 3px; color: #fff; }
-  #tt-time { font-size: 10px; color: #888; margin-bottom: 6px; }
-  #tt-body { font-size: 11px; color: #bbb; line-height: 1.55; }
-  #tt-badge { display: inline-block; font-size: 10px; font-weight: 500; padding: 2px 7px; border-radius: 4px; margin-top: 6px; }
-
+  .ctrl-sep { width: 1px; height: 32px; background: var(--color-border-tertiary); margin: 0 4px; }
+  .vol-btn { padding: 9px 22px; font-size: 13px; font-weight: 500; cursor: pointer; border-radius: 8px; user-select: none; border: 2px solid var(--color-border-secondary); background: var(--color-background-secondary); color: var(--color-text-secondary); transition: all 0.15s; display: flex; align-items: center; gap: 8px; }
+  .vol-btn .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: var(--color-border-secondary); transition: background 0.15s; }
+  .vol-btn:hover { border-color: var(--color-border-primary); color: var(--color-text-primary); }
+  .vol-btn.active { background: #0f172a; border-color: #3b82f6; color: #93c5fd; }
+  .vol-btn.active .dot { background: #3b82f6; }
+  .vol-note-tag { font-size: 10px; color: var(--color-text-tertiary); }
   .panel { display: none; }
   .panel.active { display: block; }
-
   .hour-axis { display: flex; margin-left: 114px; margin-bottom: 4px; }
   .hour-tick { flex: 1; font-size: 10px; color: var(--color-text-tertiary); text-align: center; }
-
   .row { display: flex; align-items: center; margin-bottom: 5px; }
   .row-label { width: 114px; font-size: 11px; color: var(--color-text-secondary); flex-shrink: 0; padding-right: 8px; text-align: right; line-height: 1.3; }
   .row-label span { display: block; font-size: 10px; color: var(--color-text-tertiary); }
   .row-label.hl { color: var(--color-text-primary); font-weight: 500; }
   .row-label.hl span { color: var(--color-text-secondary); }
-
-  .bar-track { flex: 1; height: 22px; position: relative; background: var(--color-background-secondary); border-radius: 4px; border: 0.5px solid var(--color-border-tertiary); }
+  .bar-track { flex: 1; height: 22px; position: relative; background: var(--color-background-secondary); border-radius: 4px; border: 0.5px solid var(--color-border-tertiary); overflow: hidden; }
   .bar-track.perpl-track { height: 28px; border-color: rgba(99,179,112,0.4); background: rgba(99,179,112,0.04); }
-
   .seg { height: 100%; position: absolute; top: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: filter 0.15s; }
   .seg:hover { filter: brightness(1.4); z-index: 20; }
   .seg-label { font-size: 9px; font-weight: 500; white-space: nowrap; overflow: hidden; color: rgba(255,255,255,0.85); pointer-events: none; }
-
   .q-seg { height: 100%; position: absolute; top: 0; cursor: pointer; transition: filter 0.15s; border-radius: 2px; }
   .q-seg:hover { filter: brightness(1.3); z-index: 20; }
-
   .section-divider { display: flex; align-items: center; gap: 8px; margin: 11px 0 6px; }
   .section-divider span { font-size: 10px; font-weight: 500; color: var(--color-text-tertiary); text-transform: uppercase; letter-spacing: 0.6px; white-space: nowrap; }
   .section-divider hr { flex: 1; border: none; border-top: 0.5px solid var(--color-border-tertiary); }
-
   .onchain-divider { display: flex; align-items: center; gap: 8px; margin: 11px 0 6px; }
   .onchain-divider hr { flex: 1; border: none; border-top: 0.5px solid rgba(100,100,180,0.35); }
   .onchain-divider span { font-size: 10px; font-weight: 500; color: #8888cc; text-transform: uppercase; letter-spacing: 0.6px; white-space: nowrap; background: rgba(100,100,180,0.08); padding: 2px 8px; border-radius: 4px; border: 0.5px solid rgba(100,100,180,0.2); }
-
   .perpl-divider { display: flex; align-items: center; gap: 10px; margin: 14px 0 8px; }
   .perpl-divider hr { flex: 1; border: none; border-top: 1.5px solid rgba(99,179,112,0.5); }
   .perpl-divider span { font-size: 11px; font-weight: 600; color: #63b370; text-transform: uppercase; letter-spacing: 0.8px; white-space: nowrap; background: rgba(99,179,112,0.1); padding: 3px 10px; border-radius: 4px; border: 0.5px solid rgba(99,179,112,0.3); }
-
   .weekend-note { background: rgba(220,38,38,0.07); border: 0.5px solid rgba(220,38,38,0.25); border-radius: 6px; padding: 10px 14px; font-size: 12px; color: var(--color-text-secondary); margin-bottom: 14px; line-height: 1.6; }
   .weekend-note strong { color: #ef4444; }
-
   .event-pin { position: absolute; display: flex; flex-direction: column; align-items: center; pointer-events: none; }
   .event-pin .edot { width: 5px; height: 5px; border-radius: 50%; margin-bottom: 2px; }
   .event-pin .elabel { font-size: 9px; white-space: nowrap; transform: translateX(-50%); display: block; }
+  .vol-section { display: none; margin-top: 6px; }
+  .vol-section.open { display: block; }
+  .vol-header-row { margin-left: 114px; margin-bottom: 4px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .vol-li { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--color-text-tertiary); }
+  .vol-dot { width: 8px; height: 8px; border-radius: 2px; }
+  .vol-wrap { display: flex; align-items: stretch; }
+  .vol-yaxis { width: 114px; display: flex; flex-direction: column; justify-content: space-between; padding-right: 8px; text-align: right; height: 140px; }
+  .vol-ylabel { font-size: 9px; color: var(--color-text-tertiary); }
+  .vol-plot { flex: 1; position: relative; }
+  .vol-gridline { position: absolute; left: 0; right: 0; border-top: 0.5px solid var(--color-border-tertiary); pointer-events: none; }
+  .vol-bars { display: flex; gap: 2px; align-items: flex-end; height: 140px; }
+  .vol-col { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; cursor: pointer; }
+  .vol-col:hover .vol-seg { filter: brightness(1.3); }
+  .vol-seg { width: 100%; transition: filter 0.12s; }
+  .vol-xaxis { display: flex; margin-top: 4px; }
+  .vol-xlabel { flex: 1; font-size: 9px; color: var(--color-text-tertiary); text-align: center; }
+  .vol-btn.disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
+  #tt { position: fixed; pointer-events: none; z-index: 999; max-width: 280px; background: #1a1a24; border: 1px solid #333344; border-radius: 10px; padding: 12px 14px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); opacity: 0; transition: opacity 0.1s; }
+  #tt.show { opacity: 1; }
+  #tt-head { font-size: 12px; font-weight: 500; color: #fff; margin-bottom: 2px; }
+  #tt-sub { font-size: 10px; color: #666; margin-bottom: 6px; }
+  #tt-body-text { font-size: 11px; color: #bbb; line-height: 1.5; }
+  #tt-badge { font-size: 10px; font-weight: 500; padding: 2px 7px; border-radius: 4px; margin-top: 6px; display: inline-block; }
+  .tt-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 3px; font-size: 11px; }
+  .tt-lbl { color: #888; display: flex; align-items: center; gap: 5px; }
+  .tt-val { color: #e8e8f0; font-weight: 500; white-space: nowrap; }
+  .tt-total-row { margin-top: 6px; padding-top: 6px; border-top: 0.5px solid #333; display: flex; justify-content: space-between; font-size: 11px; }
 </style>
 </head>
 <body>
 
-<div id="tooltip">
-  <div id="tt-source"></div>
-  <div id="tt-time"></div>
-  <div id="tt-body"></div>
+<div id="tt">
+  <div id="tt-head"></div>
+  <div id="tt-sub"></div>
+  <div id="tt-body-text"></div>
   <div id="tt-badge"></div>
+  <div id="tt-vol-rows" style="display:none;"></div>
+  <div id="tt-vol-total" class="tt-total-row" style="display:none;"><span style="color:#666;">Total</span><span id="tt-total-val" style="color:#fff;font-weight:600;"></span></div>
 </div>
 
-<div class="title">Oil oracle: data source availability</div>
-<div class="subtitle">Toggle weekday vs weekend to see how data sources change.</div>
+<div class="title">Oil oracle — data source availability</div>
+<div class="subtitle">Toggle weekday vs weekend. Hover any segment for details.</div>
 
-<div class="tab-row">
-  <div class="tab wd active" onclick="switchTab('weekday',this)"><span class="dot"></span>Weekday (Mon-Fri)</div>
-  <div class="tab we" onclick="switchTab('weekend',this)"><span class="dot"></span>Weekend (Fri 21:00 - Sun 22:00 UTC)</div>
+<div class="controls">
+  <div class="tab wd active" onclick="switchTab('weekday',this)"><span class="dot"></span>Weekday (Mon–Fri)</div>
+  <div class="tab we" onclick="switchTab('weekend',this)"><span class="dot"></span>Weekend (Fri 21:00 → Sun 22:00 UTC)</div>
+  <div class="ctrl-sep"></div>
+  <div class="vol-btn" id="vol-btn" onclick="toggleVol()"><span class="dot"></span>Volume profile <span class="vol-note-tag">est.</span></div>
 </div>
 
 <!-- WEEKDAY -->
 <div class="panel active" id="panel-weekday">
+  <div class="vol-section" id="vol-section">
+    <div class="vol-header-row" id="vol-legend"></div>
+    <div class="vol-wrap">
+      <div class="vol-yaxis" id="vol-yaxis"></div>
+      <div class="vol-plot" id="vol-plot">
+        <div id="vol-gridlines"></div>
+        <div class="vol-bars" id="vol-bars"></div>
+        <div class="vol-xaxis" id="vol-xaxis"></div>
+      </div>
+    </div>
+    <div style="font-size:10px;color:var(--color-text-tertiary);margin-left:114px;margin-top:6px;margin-bottom:4px;">Research estimates · WTI $144B/day · Brent $108B/day · Oman $320M/day · HL/trade.xyz $1.2B/day · not validated</div>
+  </div>
   <div class="hour-axis" id="axis-wd"></div>
-
   <div class="section-divider"><hr><span>Exchange feeds</span><hr></div>
-  <div class="row">
-    <div class="row-label">WTI (CME)<span>NYMEX CL</span></div>
-    <div class="bar-track">
-      <div class="seg" style="left:0%;width:87.5%;background:#2563a8;border-radius:4px 0 0 4px;" data-s="WTI: CME / NYMEX" data-t="22:00-21:00 UTC (23h)" data-b="~2M contracts/day (~2B bbl notional). 57% of volume is calendar spreads. Physical delivery at Cushing, Oklahoma." data-badge="R2 / R1 during London-NY overlap" data-c="#2563a8"><span class="seg-label" style="padding:0 6px;">Open: 2B bbl/day</span></div>
-      <div class="seg" style="left:87.5%;width:4.17%;background:#333;" data-s="WTI: CME Closed (daily break)" data-t="21:00-22:00 UTC" data-b="CME maintenance. No WTI or Oman. Oracle degrades to R3." data-badge="R3 Thin" data-c="#b45309"><span class="seg-label" style="font-size:8px;color:rgba(255,255,255,0.4);">Break</span></div>
-      <div class="seg" style="left:91.67%;width:8.33%;background:#2563a8;border-radius:0 4px 4px 0;" data-s="WTI: CME reopens" data-t="22:00-24:00 UTC" data-b="CME reopens. Low volume. Brent closes at 23:00 UTC." data-badge="R2 Partial" data-c="#2563a8"></div>
-    </div>
+  <div style="display:flex;margin-left:114px;margin-bottom:5px;gap:10px;align-items:center;">
+    <div style="font-size:9px;color:var(--color-text-tertiary);">Volume intensity:</div>
+    <div style="display:flex;align-items:center;gap:3px;"><div style="width:22px;height:6px;border-radius:2px;background:rgba(100,150,255,0.35);"></div><span style="font-size:9px;color:var(--color-text-tertiary);">thin</span></div>
+    <div style="display:flex;align-items:center;gap:3px;"><div style="width:22px;height:6px;border-radius:2px;background:rgba(100,150,255,0.65);"></div><span style="font-size:9px;color:var(--color-text-tertiary);">moderate</span></div>
+    <div style="display:flex;align-items:center;gap:3px;"><div style="width:22px;height:6px;border-radius:2px;background:#2563a8;"></div><span style="font-size:9px;color:var(--color-text-tertiary);">peak</span></div>
   </div>
-  <div class="row">
-    <div class="row-label">Brent (ICE)<span>ICE Europe</span></div>
-    <div class="bar-track">
-      <div class="seg" style="left:0%;width:4.17%;background:#333;border-radius:4px 0 0 4px;" data-s="Brent: ICE Closed (overnight gap)" data-t="23:00-01:00 UTC" data-b="ICE overnight gap. WTI and Oman remain open." data-badge="R2- Degraded" data-c="#b45309"></div>
-      <div class="seg" style="left:4.17%;width:91.67%;background:#1e7a5a;border-radius:0 4px 4px 0;" data-s="Brent: ICE Futures Europe" data-t="01:00-23:00 UTC (22h)" data-b="~1.5M contracts/day. Settlement VWAP 19:28-19:30 UTC. Prices ~70% of world crude via the Dated Brent chain." data-badge="R2 / R1 during London-NY overlap" data-c="#1e7a5a"><span class="seg-label" style="padding:0 6px;">Open: 1.5B bbl/day</span></div>
-    </div>
-  </div>
-  <div class="row">
-    <div class="row-label">Oman (GME)<span>via Globex</span></div>
-    <div class="bar-track">
-      <div class="seg" style="left:0%;width:87.5%;background:#7c3aad;border-radius:4px 0 0 4px;" data-s="Oman: GME (Gulf Mercantile Exchange)" data-t="22:00-21:00 UTC" data-b="~4-5K contracts/day. Prices 5.5M bbl/day of ME->Asia crude. Key marker window 08:25-08:30 UTC." data-badge="R2 / R1" data-c="#7c3aad"><span class="seg-label" style="padding:0 6px;">Open: 4-5K contracts/day</span></div>
-      <div class="seg" style="left:87.5%;width:4.17%;background:#333;" data-s="Oman: GME Closed (CME break)" data-t="21:00-22:00 UTC" data-b="Closes alongside CME." data-badge="R3 Thin" data-c="#b45309"></div>
-      <div class="seg" style="left:91.67%;width:8.33%;background:#7c3aad;border-radius:0 4px 4px 0;" data-s="Oman: GME reopens" data-t="22:00-24:00 UTC" data-b="Thin volume until Asian session." data-badge="R2 Partial" data-c="#7c3aad"></div>
-    </div>
-  </div>
-
+  <div class="row"><div class="row-label">WTI (CME)<span>~2M contracts/day</span></div><div class="bar-track" style="overflow:hidden;"><div style="position:absolute;left:0%;width:87.5%;top:0;bottom:0;background:#2563a8;border-radius:4px 0 0 4px;pointer-events:none;"></div><div style="position:absolute;left:0%;width:4.17%;top:0;bottom:0;background:rgba(255,255,255,0.52);pointer-events:none;"></div><div style="position:absolute;left:4.17%;width:29.17%;top:0;bottom:0;background:rgba(255,255,255,0.50);pointer-events:none;"></div><div style="position:absolute;left:33.33%;width:20.83%;top:0;bottom:0;background:rgba(255,255,255,0.22);pointer-events:none;"></div><div style="position:absolute;left:70.83%;width:16.67%;top:0;bottom:0;background:rgba(255,255,255,0.25);pointer-events:none;"></div><div style="position:absolute;left:91.67%;width:8.33%;top:0;bottom:0;background:#2563a8;border-radius:0 4px 4px 0;pointer-events:none;"></div><div style="position:absolute;left:91.67%;width:8.33%;top:0;bottom:0;background:rgba(255,255,255,0.50);pointer-events:none;"></div><div class="seg" style="left:87.5%;width:4.17%;background:#333;" data-s="WTI — CME Closed" data-t="21:00–22:00 UTC" data-b="CME maintenance. No WTI or Oman. Oracle degrades to R3. σ ×2.5, IM ×1.5." data-badge="R3 Thin — σ ×2.5" data-c="#b45309"><span class="seg-label" style="font-size:8px;color:rgba(255,255,255,0.4);">Break</span></div><div class="seg" style="left:0%;width:4.17%;background:transparent;border-radius:4px 0 0 4px;" data-s="WTI — thin (overnight)" data-t="00:00–01:00 UTC" data-b="CME open but very thin. Brent gap in effect." data-badge="~2–4% of daily volume" data-c="#2563a8"></div><div class="seg" style="left:4.17%;width:29.17%;background:transparent;" data-s="WTI — Asian session (thin)" data-t="01:00–08:00 UTC" data-b="Lowest volume window. ~8–12% of daily volume. Asia-Pacific participants active but WTI is not their primary benchmark." data-badge="~8–12% of daily volume" data-c="#2563a8"><span class="seg-label" style="padding:0 4px;font-size:8px;opacity:0.7;">Asian — thin</span></div><div class="seg" style="left:33.33%;width:20.83%;background:transparent;" data-s="WTI — London session (moderate)" data-t="08:00–13:00 UTC" data-b="Volume building as European traders come online. ~20–25% of daily volume." data-badge="~20–25% of daily volume" data-c="#2563a8"><span class="seg-label" style="padding:0 4px;font-size:8px;opacity:0.7;">London</span></div><div class="seg" style="left:54.17%;width:16.67%;background:transparent;" data-s="WTI — London-NY overlap (PEAK)" data-t="13:00–17:00 UTC" data-b="Peak liquidity. ~40–50% of total daily WTI volume here. Both NYMEX electronic and open outcry active." data-badge="~40–50% of daily volume — peak" data-c="#2563a8"><span class="seg-label" style="padding:0 4px;font-size:8px;">PEAK</span></div><div class="seg" style="left:70.83%;width:16.67%;background:transparent;" data-s="WTI — NY afternoon (moderate)" data-t="17:00–21:00 UTC" data-b="Post-peak NY session. CME settlement at 19:25–19:30 UTC spikes activity briefly. ~18–22% of daily volume." data-badge="~18–22% of daily volume" data-c="#2563a8"><span class="seg-label" style="padding:0 4px;font-size:8px;opacity:0.7;">NY afternoon</span></div><div class="seg" style="left:91.67%;width:8.33%;background:transparent;border-radius:0 4px 4px 0;" data-s="WTI — thin (reopen)" data-t="22:00–24:00 UTC" data-b="CME reopens after maintenance. Very thin until Asian session." data-badge="~2–4% of daily volume" data-c="#2563a8"></div></div></div>
+  <div class="row"><div class="row-label">Brent (ICE)<span>~1.5M contracts/day</span></div><div class="bar-track" style="overflow:hidden;"><div style="position:absolute;left:0%;width:4.17%;top:0;bottom:0;background:#333;border-radius:4px 0 0 4px;pointer-events:none;"></div><div style="position:absolute;left:4.17%;width:91.67%;top:0;bottom:0;background:#1e7a5a;border-radius:0 4px 4px 0;pointer-events:none;"></div><div style="position:absolute;left:4.17%;width:29.17%;top:0;bottom:0;background:rgba(255,255,255,0.50);pointer-events:none;"></div><div style="position:absolute;left:33.33%;width:20.83%;top:0;bottom:0;background:rgba(255,255,255,0.22);pointer-events:none;"></div><div style="position:absolute;left:70.83%;width:16.67%;top:0;bottom:0;background:rgba(255,255,255,0.25);pointer-events:none;"></div><div style="position:absolute;left:87.5%;width:8.33%;top:0;bottom:0;background:rgba(255,255,255,0.50);pointer-events:none;"></div><div class="seg" style="left:0%;width:4.17%;background:transparent;border-radius:4px 0 0 4px;" data-s="Brent — ICE Closed (overnight gap)" data-t="23:00–01:00 UTC" data-b="ICE overnight gap. WTI and Oman remain open. σ ×1.2." data-badge="R2− Degraded — σ ×1.2" data-c="#b45309"></div><div class="seg" style="left:4.17%;width:29.17%;background:transparent;" data-s="Brent — Asian session (thin)" data-t="01:00–08:00 UTC" data-b="Brent open but thinly traded. Singapore participants use Brent for reference but Dubai/Oman are primary Asia benchmarks." data-badge="~8–10% of daily volume" data-c="#1e7a5a"><span class="seg-label" style="padding:0 4px;font-size:8px;opacity:0.7;">Asian — thin</span></div><div class="seg" style="left:33.33%;width:20.83%;background:transparent;" data-s="Brent — London session (moderate)" data-t="08:00–13:00 UTC" data-b="Brent's home session. Volume builds as London opens." data-badge="~22–28% of daily volume" data-c="#1e7a5a"><span class="seg-label" style="padding:0 4px;font-size:8px;opacity:0.7;">London</span></div><div class="seg" style="left:54.17%;width:16.67%;background:transparent;" data-s="Brent — London-NY overlap (PEAK)" data-t="13:00–17:00 UTC" data-b="Peak Brent liquidity. Dated Brent MOC at 15:30–16:30 UTC is the defining event." data-badge="~35–45% of daily volume — peak" data-c="#1e7a5a"><span class="seg-label" style="padding:0 4px;font-size:8px;">PEAK</span></div><div class="seg" style="left:70.83%;width:16.67%;background:transparent;" data-s="Brent — NY afternoon (moderate)" data-t="17:00–21:00 UTC" data-b="ICE Brent settlement VWAP at 19:28–19:30 UTC. Volume declining post-London." data-badge="~18–22% of daily volume" data-c="#1e7a5a"><span class="seg-label" style="padding:0 4px;font-size:8px;opacity:0.7;">NY settle</span></div><div class="seg" style="left:87.5%;width:8.33%;background:transparent;" data-s="Brent — thin (pre-close)" data-t="19:30–23:00 UTC" data-b="Volume drops sharply after ICE settlement. Closes 23:00 UTC." data-badge="~4–6% of daily volume" data-c="#1e7a5a"></div></div></div>
+  <div class="row"><div class="row-label">Oman (GME)<span>~4–5K contracts/day</span></div><div class="bar-track" style="overflow:hidden;"><div style="position:absolute;left:0%;width:87.5%;top:0;bottom:0;background:#7c3aad;border-radius:4px 0 0 4px;pointer-events:none;"></div><div style="position:absolute;left:0%;width:33.33%;top:0;bottom:0;background:rgba(255,255,255,0.52);pointer-events:none;"></div><div style="position:absolute;left:35.42%;width:43.75%;top:0;bottom:0;background:rgba(255,255,255,0.52);pointer-events:none;"></div><div style="position:absolute;left:80.83%;width:6.67%;top:0;bottom:0;background:rgba(255,255,255,0.52);pointer-events:none;"></div><div style="position:absolute;left:91.67%;width:8.33%;top:0;bottom:0;background:#7c3aad;border-radius:0 4px 4px 0;pointer-events:none;"></div><div style="position:absolute;left:91.67%;width:8.33%;top:0;bottom:0;background:rgba(255,255,255,0.52);pointer-events:none;"></div><div class="seg" style="left:87.5%;width:4.17%;background:#333;" data-s="Oman — GME Closed (CME break)" data-t="21:00–22:00 UTC" data-b="Closes alongside CME." data-badge="R3 Thin" data-c="#b45309"></div><div class="seg" style="left:0%;width:33.33%;background:transparent;border-radius:4px 0 0 4px;" data-s="Oman — thin (overnight + early Asian)" data-t="22:00–08:00 UTC" data-b="Thin outside marker window. Singapore participants primary audience." data-badge="~5% of daily volume" data-c="#7c3aad"><span class="seg-label" style="padding:0 4px;font-size:8px;opacity:0.6;">Thin</span></div><div class="seg" style="left:33.33%;width:2.08%;background:transparent;" data-s="Oman — daily marker window (PEAK)" data-t="08:25–08:30 UTC" data-b="5-minute Oman daily marker window. Most of the day's volume concentrated here. Sets benchmark for 5.5M bbl/day of ME→Asia crude exports." data-badge="~40–50% of daily volume in 5 minutes" data-c="#7c3aad"></div><div class="seg" style="left:35.42%;width:43.75%;background:transparent;" data-s="Oman — thin (post-marker)" data-t="08:30–19:25 UTC" data-b="Thin volume after marker window." data-badge="~5–10% of daily volume" data-c="#7c3aad"></div><div class="seg" style="left:79.17%;width:1.67%;background:transparent;" data-s="Oman — CME settlement window (PEAK)" data-t="19:25–19:30 UTC" data-b="Second volume spike at CME settlement. Margins calculated against this price." data-badge="~25–30% of daily volume" data-c="#7c3aad"></div><div class="seg" style="left:80.83%;width:6.67%;background:transparent;" data-s="Oman — thin (pre-break)" data-t="19:30–21:00 UTC" data-b="Volume drops after CME settlement." data-badge="~5% of daily volume" data-c="#7c3aad"></div><div class="seg" style="left:91.67%;width:8.33%;background:transparent;border-radius:0 4px 4px 0;" data-s="Oman — thin (post-reopen)" data-t="22:00–24:00 UTC" data-b="Thin until Asian session." data-badge="~2–3% of daily volume" data-c="#7c3aad"></div></div></div>
   <div class="section-divider"><hr><span>Physical benchmarks</span><hr></div>
-  <div class="row">
-    <div class="row-label">Dubai/Oman MOC<span>Platts, Singapore</span></div>
-    <div class="bar-track">
-      <div class="seg" style="left:33.33%;width:2.08%;background:#d97706;border-radius:4px;" data-s="Dubai/Oman MOC: S&P Global Platts" data-t="08:00-08:30 UTC" data-b="25K bbl partials -> 500K bbl. Prices 18 mb/d of ME crude to Asia. Record Mar 2026: ~$4B in partials, 77 cargoes (38.5M bbl)." data-badge="Physical anchor: 18 mb/d" data-c="#d97706"></div>
-    </div>
-  </div>
-  <div class="row">
-    <div class="row-label">Dated Brent MOC<span>Platts, London</span></div>
-    <div class="bar-track">
-      <div class="seg" style="left:64.58%;width:4.17%;background:#b45309;border-radius:4px;" data-s="Dated Brent MOC: S&P Global Platts" data-t="15:30-16:30 UTC" data-b="100K bbl partials -> 700K bbl. 6 deliverable grades incl. WTI Midland. Prices up to 70% of world crude." data-badge="Most important benchmark globally" data-c="#b45309"></div>
-    </div>
-  </div>
-  <div class="row">
-    <div class="row-label">ICE settle + EIA</div>
-    <div class="bar-track">
-      <div class="seg" style="left:80.56%;width:0.83%;background:#be8a2d;border-radius:4px;" data-s="ICE Brent Daily Settlement" data-t="19:28-19:30 UTC" data-b="2-min VWAP. Daily calibration anchor for state vector." data-badge="Settlement anchor" data-c="#be8a2d"></div>
-      <div class="seg" style="left:56.25%;width:0.83%;background:#92400e;border-radius:4px;" data-s="EIA Weekly Report (Wed only)" data-t="~13:30 UTC Wednesdays" data-b="Sharpest intraweek moves in WTI + Brent." data-badge="Highest weekly vol event" data-c="#92400e"></div>
-    </div>
-  </div>
-
+  <div class="row"><div class="row-label">Dubai/Oman MOC<span>Platts, Singapore</span></div><div class="bar-track"><div class="seg" style="left:33.33%;width:2.08%;background:#d97706;border-radius:4px;" data-s="Dubai/Oman MOC — Platts" data-t="08:00–08:30 UTC" data-b="25K bbl partials → 500K bbl. Prices 18 mb/d of ME crude to Asia. Record Mar 2026: ~$4B, 77 cargoes." data-badge="Physical anchor — 18 mb/d" data-c="#d97706"></div></div></div>
+  <div class="row"><div class="row-label">Dated Brent MOC<span>Platts, London</span></div><div class="bar-track"><div class="seg" style="left:64.58%;width:4.17%;background:#b45309;border-radius:4px;" data-s="Dated Brent MOC — Platts" data-t="15:30–16:30 UTC" data-b="100K bbl partials → 700K bbl. 6 deliverable grades. Prices up to 70% of world crude." data-badge="Most important benchmark globally" data-c="#b45309"></div></div></div>
+  <div class="row"><div class="row-label">ICE settle + EIA</div><div class="bar-track"><div class="seg" style="left:80.56%;width:0.83%;background:#be8a2d;border-radius:4px;" data-s="ICE Brent Daily Settlement" data-t="19:28–19:30 UTC" data-b="2-min VWAP. Daily calibration anchor." data-badge="Settlement anchor" data-c="#be8a2d"></div><div class="seg" style="left:56.25%;width:0.83%;background:#92400e;border-radius:4px;" data-s="EIA Weekly Report (Wed only)" data-t="~13:30 UTC Wednesdays" data-b="Sharpest intraweek moves in WTI + Brent." data-badge="Highest weekly vol event" data-c="#92400e"></div></div></div>
   <div class="section-divider"><hr><span>Oracle feeds</span><hr></div>
-  <div class="row">
-    <div class="row-label">Chainlink<span>~24h heartbeat</span></div>
-    <div class="bar-track">
-      <div class="seg" style="left:0%;width:100%;background:#1a4480;border-radius:4px;" data-s="Chainlink: WTI/USD + Brent/USD" data-t="Continuous (24/7)" data-b="~24h heartbeat, 1-2% deviation threshold. Calibration anchor only. No Oman feed." data-badge="Slow anchor: not real-time" data-c="#1a4480"><span class="seg-label" style="padding:0 6px;">~24h heartbeat, 1-2% deviation</span></div>
-    </div>
-  </div>
-  <div class="row">
-    <div class="row-label">Pyth standard<span>11 WTI / 8 Brent</span></div>
-    <div class="bar-track">
-      <div class="seg" style="left:4.17%;width:83.33%;background:#155e75;" data-s="Pyth: USOILSPOT / UKOILSPOT" data-t="Live during exchange hours" data-b="CFD prices tracking WTI/Brent front-month. 11 publishers WTI, 8 Brent. ~400ms. Goes stale when exchanges close." data-badge="11-8 publishers, ~400ms" data-c="#155e75"><span class="seg-label" style="padding:0 6px;">Live (exchange hours)</span></div>
-      <div class="seg" style="left:0%;width:4.17%;background:#164e63;opacity:0.4;border-radius:4px 0 0 4px;" data-s="Pyth standard: stale (Brent gap)" data-t="23:00-01:00 UTC" data-b="Stale during Brent gap." data-badge="Stale" data-c="#b45309"></div>
-      <div class="seg" style="left:87.5%;width:4.17%;background:#164e63;opacity:0.4;" data-s="Pyth standard: stale (CME break)" data-t="21:00-22:00 UTC" data-b="Stale during CME break." data-badge="Stale" data-c="#b45309"></div>
-      <div class="seg" style="left:91.67%;width:8.33%;background:#164e63;opacity:0.3;border-radius:0 4px 4px 0;" data-s="Pyth standard: degraded overnight" data-t="22:00-24:00 UTC" data-b="Thin publishers, low volume." data-badge="Degraded" data-c="#b45309"><span class="seg-label" style="font-size:8px;padding:0 3px;">Stale</span></div>
-    </div>
-  </div>
-  <div class="row">
-    <div class="row-label">Pyth 24/7<span>Launched Mar 2026</span></div>
-    <div class="bar-track">
-      <div class="seg" style="left:0%;width:100%;background:#0e6f85;border-radius:4px;" data-s="Pyth 24/7 Oil Index" data-t="Continuous" data-b="Opaque methodology. Shifts to onchain (Hyperliquid) off-hours. Not an independent signal when exchanges close." data-badge="Converges on HL off-hours: opaque" data-c="#0e6f85"><span class="seg-label" style="padding:0 8px;">Continuous, shifts to onchain off-hours</span></div>
-    </div>
-  </div>
-
+  <div class="row"><div class="row-label">Chainlink<span>~24h heartbeat</span></div><div class="bar-track"><div class="seg" style="left:0%;width:100%;background:#1a4480;border-radius:4px;" data-s="Chainlink — WTI/USD + Brent/USD" data-t="Continuous (24/7)" data-b="~24h heartbeat, 1–2% deviation. Calibration anchor only. No Oman feed." data-badge="Slow anchor — not real-time" data-c="#1a4480"><span class="seg-label" style="padding:0 6px;">~24h heartbeat · 1–2% deviation</span></div></div></div>
+  <div class="row"><div class="row-label">Pyth standard<span>11 WTI / 8 Brent</span></div><div class="bar-track"><div class="seg" style="left:4.17%;width:83.33%;background:#155e75;" data-s="Pyth — USOILSPOT / UKOILSPOT" data-t="Live during exchange hours" data-b="CFD prices tracking WTI/Brent front-month. 11 publishers WTI, 8 Brent. ~400ms. Goes stale when exchanges close." data-badge="11–8 publishers · ~400ms" data-c="#155e75"><span class="seg-label" style="padding:0 6px;">Live (exchange hours)</span></div><div class="seg" style="left:0%;width:4.17%;background:#164e63;opacity:0.4;border-radius:4px 0 0 4px;" data-s="Pyth standard — stale (Brent gap)" data-t="23:00–01:00 UTC" data-b="Stale during Brent gap." data-badge="Stale" data-c="#b45309"></div><div class="seg" style="left:87.5%;width:4.17%;background:#164e63;opacity:0.4;" data-s="Pyth standard — stale (CME break)" data-t="21:00–22:00 UTC" data-b="Stale during CME break." data-badge="Stale" data-c="#b45309"></div><div class="seg" style="left:91.67%;width:8.33%;background:#164e63;opacity:0.3;border-radius:0 4px 4px 0;" data-s="Pyth standard — degraded" data-t="22:00–24:00 UTC" data-b="Thin publishers, low volume." data-badge="Degraded" data-c="#b45309"><span class="seg-label" style="font-size:8px;padding:0 3px;">Stale</span></div></div></div>
+  <div class="row"><div class="row-label">Pyth 24/7<span>Launched Mar 2026</span></div><div class="bar-track"><div class="seg" style="left:0%;width:100%;background:#0e6f85;border-radius:4px;" data-s="Pyth 24/7 Oil Index" data-t="Continuous" data-b="Opaque methodology. Shifts to onchain (Hyperliquid) off-hours. Not an independent signal when exchanges close." data-badge="Converges on HL off-hours — opaque" data-c="#0e6f85"><span class="seg-label" style="padding:0 8px;">Continuous · shifts to onchain off-hours</span></div></div></div>
   <div class="onchain-divider"><hr><span>Onchain venues (L3)</span><hr></div>
-  <div class="row">
-    <div class="row-label">Hyperliquid<span>EWMA, $543 median</span></div>
-    <div class="bar-track">
-      <div class="seg" style="left:4.17%;width:83.33%;background:#c0392b;" data-s="Hyperliquid: WTIOIL" data-t="24/7" data-b="$1.2B+ ADV (peak $1.7B). Median trade $543 vs $90,450 on CME. Slippage at $1M: 15.4 bps vs 0.79 bps. EWMA oracle, +/-50 bps clamp." data-badge="L3 signal, retail-dominated" data-c="#c0392b"><span class="seg-label" style="padding:0 6px;">$1.2B+ ADV</span></div>
-      <div class="seg" style="left:0%;width:4.17%;background:#922b21;border-radius:4px 0 0 4px;" data-s="Hyperliquid: sole source (Brent gap)" data-t="23:00-01:00 UTC" data-b="During Brent gap, HL is the only live venue. All 24/7 oracles reference this same thin book." data-badge="Only active venue: sole signal" data-c="#ef4444"></div>
-      <div class="seg" style="left:87.5%;width:12.5%;background:#922b21;border-radius:0 4px 4px 0;" data-s="Hyperliquid: sole source (off-hours)" data-t="21:00-22:00 UTC + overnight" data-b="CME break + overnight. HL is the primary discovery venue. The $543 median-trade book is the weekend oracle for the entire industry." data-badge="Sole source off-hours: thin" data-c="#ef4444"><span class="seg-label" style="font-size:8px;padding:0 3px;">Sole</span></div>
-    </div>
-  </div>
-  <div class="row">
-    <div class="row-label">Lighter<span>$25M/$100M OI cap</span></div>
-    <div class="bar-track">
-      <div class="seg" style="left:4.17%;width:83.33%;background:#7c5c1a;" data-s="Lighter: WTI + Brent" data-t="Exchange hours" data-b="Pyth Lazer. $25M OI cap WTI, $100M Brent. Single contract, no rolling. No spreads, no Oman." data-badge="OI capped, single contract" data-c="#7c5c1a"><span class="seg-label" style="padding:0 6px;">Active (Pyth Lazer)</span></div>
-      <div class="seg" style="left:0%;width:4.17%;background:#4a3510;opacity:0.6;border-radius:4px 0 0 4px;" data-s="Lighter: frozen (Brent gap)" data-t="23:00-01:00 UTC" data-b="Reduce-only. Index frozen +/-0.5% from book." data-badge="Frozen" data-c="#b45309"></div>
-      <div class="seg" style="left:87.5%;width:4.17%;background:#4a3510;opacity:0.6;" data-s="Lighter: reduce-only (CME break)" data-t="21:00-22:00 UTC" data-b="No new positions." data-badge="Reduce-only" data-c="#b45309"></div>
-      <div class="seg" style="left:91.67%;width:8.33%;background:#2a1f08;border-radius:0 4px 4px 0;" data-s="Lighter: frozen overnight" data-t="22:00-24:00 UTC" data-b="Index frozen." data-badge="Frozen" data-c="#b45309"><span class="seg-label" style="font-size:8px;padding:0 3px;">Frozen</span></div>
-    </div>
-  </div>
-
+  <div class="row"><div class="row-label">Hyperliquid<span>trade.xyz · HIP-3</span></div><div class="bar-track"><div class="seg" style="left:4.17%;width:83.33%;background:#c0392b;" data-s="Hyperliquid / trade.xyz — WTIOIL (HIP-3)" data-t="24/7" data-b="$1.2B+ ADV (peak $1.7B during Iran-Hormuz). Median trade $543 vs $90,450 on CME. Slippage at $1M: 15.4 bps vs 0.79 bps. EWMA oracle ±50 bps clamp. Structured as a HIP-3 RWA perp via trade.xyz." data-badge="L3 signal · retail-dominated" data-c="#c0392b"><span class="seg-label" style="padding:0 6px;">$1.2B+ ADV</span></div><div class="seg" style="left:0%;width:4.17%;background:#922b21;border-radius:4px 0 0 4px;" data-s="Hyperliquid — sole source (Brent gap)" data-t="23:00–01:00 UTC" data-b="Only live venue during Brent gap. All 24/7 oracles reference this same thin book." data-badge="Only active venue — sole signal" data-c="#ef4444"></div><div class="seg" style="left:87.5%;width:12.5%;background:#922b21;border-radius:0 4px 4px 0;" data-s="Hyperliquid — sole source (off-hours)" data-t="21:00–22:00 UTC + overnight" data-b="CME break + overnight. HL is the primary discovery venue. The $543 median-trade book is the weekend oracle for the entire industry." data-badge="Sole source off-hours — thin" data-c="#ef4444"><span class="seg-label" style="font-size:8px;padding:0 3px;">Sole</span></div></div></div>
+  <div class="row"><div class="row-label">Lighter<span>$25M/$100M OI cap</span></div><div class="bar-track"><div class="seg" style="left:4.17%;width:83.33%;background:#7c5c1a;" data-s="Lighter — WTI + Brent" data-t="Exchange hours" data-b="Pyth Lazer. $25M OI cap WTI, $100M Brent. Single contract, no rolling. No spreads, no Oman." data-badge="OI capped · single contract" data-c="#7c5c1a"><span class="seg-label" style="padding:0 6px;">Active (Pyth Lazer)</span></div><div class="seg" style="left:0%;width:4.17%;background:#4a3510;opacity:0.6;border-radius:4px 0 0 4px;" data-s="Lighter — frozen (Brent gap)" data-t="23:00–01:00 UTC" data-b="Reduce-only. Index frozen ±0.5% from book." data-badge="Frozen" data-c="#b45309"></div><div class="seg" style="left:87.5%;width:4.17%;background:#4a3510;opacity:0.6;" data-s="Lighter — reduce-only (CME break)" data-t="21:00–22:00 UTC" data-b="No new positions." data-badge="Reduce-only" data-c="#b45309"></div><div class="seg" style="left:91.67%;width:8.33%;background:#2a1f08;border-radius:0 4px 4px 0;" data-s="Lighter — frozen overnight" data-t="22:00–24:00 UTC" data-b="Index frozen." data-badge="Frozen" data-c="#b45309"><span class="seg-label" style="font-size:8px;padding:0 3px;">Frozen</span></div></div></div>
+  <div class="row"><div class="row-label">Ostium<span>Stork oracle</span></div><div class="bar-track"><div class="seg" style="left:4.17%;width:83.33%;background:#5a4a1a;" data-s="Ostium — WTI + Brent" data-t="Exchange hours only" data-b="Custom oracle via Stork Network. Fully suspends trading when CME closes — not even reduce-only." data-badge="Exchange hours only · fully suspends" data-c="#5a4a1a"><span class="seg-label" style="padding:0 6px;">Active (Stork)</span></div><div class="seg" style="left:0%;width:4.17%;background:#1a0505;opacity:0.7;border-radius:4px 0 0 4px;" data-s="Ostium — suspended (Brent gap)" data-t="23:00–01:00 UTC" data-b="Fully suspended. No trading at all." data-badge="Fully suspended" data-c="#dc2626"></div><div class="seg" style="left:87.5%;width:4.17%;background:#1a0505;opacity:0.7;" data-s="Ostium — suspended (CME break)" data-t="21:00–22:00 UTC" data-b="Fully suspends during CME break." data-badge="Fully suspended" data-c="#dc2626"></div><div class="seg" style="left:91.67%;width:8.33%;background:#1a0505;opacity:0.6;border-radius:0 4px 4px 0;" data-s="Ostium — suspended overnight" data-t="22:00–24:00 UTC" data-b="Suspended until exchange hours." data-badge="Suspended" data-c="#dc2626"><span class="seg-label" style="font-size:8px;color:rgba(255,100,100,0.6);padding:0 3px;">Suspended</span></div></div></div>
   <div class="perpl-divider"><hr><span>Perpl custom oracle</span><hr></div>
-  <div class="row">
-    <div class="row-label hl">State vector<span>4-source, live</span></div>
-    <div class="bar-track perpl-track" style="height:28px;">
-      <div class="seg" style="left:0%;width:4.17%;background:#15803d;opacity:0.7;border-radius:4px 0 0 4px;height:100%;" data-s="Perpl: R2- (Brent gap)" data-t="00:00-01:00 UTC" data-b="WTI + Oman + EWMA buffer for Brent. Market open." data-badge="R2-: market open" data-c="#15803d"></div>
-      <div class="seg" style="left:4.17%;width:29.17%;background:#16a34a;height:100%;" data-s="Perpl: R2 Asian session" data-t="01:00-08:00 UTC" data-b="All 3 exchanges live. CME MDP 3.0 + ICE iMpact + GME feeds. Base sigma." data-badge="R2: all open" data-c="#16a34a"><span class="seg-label" style="font-size:9px;padding:0 4px;">R2 Asian</span></div>
-      <div class="seg" style="left:33.33%;width:4.17%;background:#22c55e;height:100%;" data-s="Perpl: Oman MOC ingested" data-t="08:00-08:30 UTC" data-b="Physical Dubai/Oman anchor ingested into state vector. Sigma tightens." data-badge="Physical anchor ingested" data-c="#22c55e"></div>
-      <div class="seg" style="left:37.5%;width:16.67%;background:#16a34a;height:100%;" data-s="Perpl: R2 London session" data-t="08:30-13:00 UTC" data-b="London session. All sources active. Base sigma." data-badge="R2" data-c="#16a34a"><span class="seg-label" style="font-size:9px;padding:0 4px;">R2 London</span></div>
-      <div class="seg" style="left:54.17%;width:16.67%;background:#22c55e;height:100%;" data-s="Perpl: R1 Full (London-NY overlap)" data-t="13:00-17:00 UTC" data-b="Peak quality. All 3 exchanges max volume. Dated Brent MOC ingested 15:30-16:30. Tightest sigma. IMF x1.0." data-badge="R1 Full: best quality" data-c="#22c55e"><span class="seg-label" style="font-size:9px;padding:0 4px;">R1 Full</span></div>
-      <div class="seg" style="left:70.83%;width:16.67%;background:#16a34a;height:100%;" data-s="Perpl: R2 NY afternoon" data-t="17:00-21:00 UTC" data-b="ICE + CME settlements ingested. All sources active." data-badge="R2" data-c="#16a34a"><span class="seg-label" style="font-size:9px;padding:0 4px;">R2 NY</span></div>
-      <div class="seg" style="left:87.5%;width:4.17%;background:#ca8a04;height:100%;" data-s="Perpl: R3 (CME break)" data-t="21:00-22:00 UTC" data-b="CME + GME closed. R3. Market stays open: no suspend, no freeze." data-badge="R3: still open" data-c="#ca8a04"><span class="seg-label" style="font-size:9px;">R3</span></div>
-      <div class="seg" style="left:91.67%;width:4.17%;background:#16a34a;height:100%;" data-s="Perpl: recovered after CME break" data-t="22:00-23:00 UTC" data-b="CME reopens. Recovers to R2 immediately." data-badge="R2" data-c="#16a34a"></div>
-      <div class="seg" style="left:95.83%;width:4.17%;background:#15803d;opacity:0.7;border-radius:0 4px 4px 0;height:100%;" data-s="Perpl: R2- (Brent gap begins)" data-t="23:00-24:00 UTC" data-b="Brent closes. EWMA buffer maintains state. Market open." data-badge="R2-" data-c="#15803d"></div>
-    </div>
-  </div>
-  <div class="row" style="margin-bottom:2px;">
-    <div class="row-label hl" style="font-size:10px;">Quality vs others<span>comparison</span></div>
-    <div style="flex:1;">
-      <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px;">
-        <div style="font-size:9px;color:var(--color-text-tertiary);width:52px;flex-shrink:0;text-align:right;">Others</div>
-        <div style="flex:1;height:10px;border-radius:3px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);position:relative;overflow:hidden;">
-          <div class="q-seg" style="left:4.17%;width:83.33%;background:#4c7a34;opacity:0.5;" data-s="Competitors: exchange hours" data-t="01:00-21:00 UTC" data-b="Adequate during exchange hours. 11 Pyth publishers, Chainlink heartbeat. No Oman." data-badge="Adequate: exchange hours only" data-c="#4c7a34"></div>
-          <div class="q-seg" style="left:0%;width:4.17%;background:#ef4444;opacity:0.6;border-radius:3px 0 0 3px;" data-s="Competitors: dark (Brent gap)" data-t="23:00-01:00 UTC" data-b="Stale, reduce-only or frozen." data-badge="Stale / frozen" data-c="#ef4444"></div>
-          <div class="q-seg" style="left:87.5%;width:4.17%;background:#ef4444;opacity:0.6;" data-s="Competitors: dark (CME break)" data-t="21:00-22:00 UTC" data-b="Lighter freezes, Ostium suspends, Pyth goes stale." data-badge="Frozen / suspended" data-c="#ef4444"></div>
-          <div class="q-seg" style="left:91.67%;width:8.33%;background:#b45309;opacity:0.5;border-radius:0 3px 3px 0;" data-s="Competitors: degraded overnight" data-t="22:00-24:00 UTC" data-b="Thin publishers, low volume." data-badge="Degraded" data-c="#b45309"></div>
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:4px;">
-        <div style="font-size:9px;color:#16a34a;width:52px;flex-shrink:0;text-align:right;font-weight:500;">Perpl</div>
-        <div style="flex:1;height:14px;border-radius:3px;background:rgba(22,163,74,0.08);border:0.5px solid rgba(22,163,74,0.3);position:relative;overflow:hidden;">
-          <div class="q-seg" style="left:0%;width:4.17%;background:#16a34a;opacity:0.6;border-radius:3px 0 0 3px;" data-s="Perpl quality: R2-" data-t="00:00-01:00" data-b="Brent gap. Open." data-badge="R2-: open" data-c="#16a34a"></div>
-          <div class="q-seg" style="left:4.17%;width:50%;background:#16a34a;opacity:0.8;" data-s="Perpl quality: R2" data-t="01:00-13:00" data-b="All exchanges. Base sigma." data-badge="R2" data-c="#16a34a"></div>
-          <div class="q-seg" style="left:54.17%;width:16.67%;background:#22c55e;" data-s="Perpl quality: R1 Full" data-t="13:00-17:00" data-b="Peak. All sources, tightest sigma." data-badge="R1 Full" data-c="#22c55e"></div>
-          <div class="q-seg" style="left:70.83%;width:16.67%;background:#16a34a;opacity:0.8;" data-s="Perpl quality: R2 NY" data-t="17:00-21:00" data-b="Post-peak. All active." data-badge="R2" data-c="#16a34a"></div>
-          <div class="q-seg" style="left:87.5%;width:4.17%;background:#ca8a04;" data-s="Perpl quality: R3" data-t="21:00-22:00" data-b="CME break. Market open." data-badge="R3: open" data-c="#ca8a04"></div>
-          <div class="q-seg" style="left:91.67%;width:4.17%;background:#16a34a;opacity:0.8;" data-s="Perpl quality: recovered" data-t="22:00-23:00" data-b="CME reopens." data-badge="R2" data-c="#16a34a"></div>
-          <div class="q-seg" style="left:95.83%;width:4.17%;background:#16a34a;opacity:0.6;border-radius:0 3px 3px 0;" data-s="Perpl quality: R2-" data-t="23:00-24:00" data-b="Brent gap. Open." data-badge="R2-" data-c="#16a34a"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="row" style="margin-top:4px;">
-    <div class="row-label hl" style="font-size:10px;">IM multiplier</div>
-    <div class="bar-track perpl-track" style="height:18px;">
-      <div class="seg" style="left:0%;width:4.17%;background:#ca8a04;opacity:0.8;border-radius:4px 0 0 4px;height:100%;" data-s="IM x1.2: Brent gap" data-t="00:00-01:00" data-b="Brent gap. Sigma widens slightly." data-badge="1.2x" data-c="#ca8a04"><span class="seg-label" style="font-size:9px;">1.2x</span></div>
-      <div class="seg" style="left:4.17%;width:83.33%;background:#16a34a;opacity:0.65;height:100%;" data-s="IM x1.0: base" data-t="01:00-21:00" data-b="All exchanges open. Base margin applies." data-badge="1.0x base" data-c="#16a34a"><span class="seg-label" style="font-size:9px;padding:0 6px;">1.0x base</span></div>
-      <div class="seg" style="left:54.17%;width:16.67%;background:#22c55e;opacity:0.8;height:100%;" data-s="IM x1.0: peak quality" data-t="13:00-17:00" data-b="Peak quality window. Tightest sigma." data-badge="1.0x peak" data-c="#22c55e"></div>
-      <div class="seg" style="left:87.5%;width:4.17%;background:#dc2626;opacity:0.8;height:100%;" data-s="IM x1.5: R3 CME break" data-t="21:00-22:00" data-b="CME break. R3 surcharge. Market open but conservative." data-badge="1.5x" data-c="#dc2626"><span class="seg-label" style="font-size:9px;">1.5x</span></div>
-      <div class="seg" style="left:91.67%;width:4.17%;background:#16a34a;opacity:0.65;height:100%;" data-s="IM x1.0: recovered" data-t="22:00-23:00" data-b="CME reopens." data-badge="1.0x" data-c="#16a34a"></div>
-      <div class="seg" style="left:95.83%;width:4.17%;background:#ca8a04;opacity:0.8;border-radius:0 4px 4px 0;height:100%;" data-s="IM x1.2: Brent gap" data-t="23:00-24:00" data-b="Brent gap begins." data-badge="1.2x" data-c="#ca8a04"><span class="seg-label" style="font-size:9px;">1.2x</span></div>
-    </div>
-  </div>
+  <div class="row"><div class="row-label hl">Perpl State<span>4-source · live</span></div><div class="bar-track perpl-track" style="height:28px;"><div class="seg" style="left:0%;width:4.17%;background:#15803d;opacity:0.7;border-radius:4px 0 0 4px;height:100%;" data-s="Perpl — R2− (Brent gap)" data-t="00:00–01:00 UTC" data-b="WTI + Oman + EWMA buffer for Brent. Market open. σ ×1.2." data-badge="R2− · σ ×1.2 · market open" data-c="#15803d"></div><div class="seg" style="left:4.17%;width:29.17%;background:#16a34a;height:100%;" data-s="Perpl — R2 Asian" data-t="01:00–08:00 UTC" data-b="All 3 exchanges live. CME MDP 3.0 + ICE iMpact + GME. Base sigma." data-badge="R2 · σ ×1.0" data-c="#16a34a"><span class="seg-label" style="font-size:9px;padding:0 4px;">R2 Asian</span></div><div class="seg" style="left:33.33%;width:4.17%;background:#22c55e;height:100%;" data-s="Perpl — Oman MOC ingested" data-t="08:00–08:30 UTC" data-b="Physical Dubai/Oman anchor ingested into state vector." data-badge="Physical anchor ingested" data-c="#22c55e"></div><div class="seg" style="left:37.5%;width:16.67%;background:#16a34a;height:100%;" data-s="Perpl — R2 London" data-t="08:30–13:00 UTC" data-b="London session. All sources active." data-badge="R2 · σ ×1.0" data-c="#16a34a"><span class="seg-label" style="font-size:9px;padding:0 4px;">R2 London</span></div><div class="seg" style="left:54.17%;width:16.67%;background:#22c55e;height:100%;" data-s="Perpl — R1 Full (London-NY overlap)" data-t="13:00–17:00 UTC" data-b="Peak quality. All 3 exchanges max volume. Dated Brent MOC ingested. Tightest sigma." data-badge="R1 Full · best quality · σ ×1.0" data-c="#22c55e"><span class="seg-label" style="font-size:9px;padding:0 4px;">R1 Full</span></div><div class="seg" style="left:70.83%;width:16.67%;background:#16a34a;height:100%;" data-s="Perpl — R2 NY" data-t="17:00–21:00 UTC" data-b="ICE + CME settlements ingested. All sources active." data-badge="R2 · σ ×1.0" data-c="#16a34a"><span class="seg-label" style="font-size:9px;padding:0 4px;">R2 NY</span></div><div class="seg" style="left:87.5%;width:4.17%;background:#ca8a04;height:100%;" data-s="Perpl — R3 (CME break)" data-t="21:00–22:00 UTC" data-b="CME + GME closed. R3. σ ×2.5, IM ×1.5. Market stays open." data-badge="R3 · σ ×2.5 · still open" data-c="#ca8a04"><span class="seg-label" style="font-size:9px;">R3</span></div><div class="seg" style="left:91.67%;width:4.17%;background:#16a34a;height:100%;" data-s="Perpl — recovered" data-t="22:00–23:00 UTC" data-b="CME reopens. Recovers to R2." data-badge="R2 · σ ×1.0" data-c="#16a34a"></div><div class="seg" style="left:95.83%;width:4.17%;background:#15803d;opacity:0.7;border-radius:0 4px 4px 0;height:100%;" data-s="Perpl — R2− (Brent gap begins)" data-t="23:00–24:00 UTC" data-b="Brent closes. EWMA buffer. σ ×1.2. Market open." data-badge="R2− · σ ×1.2" data-c="#15803d"></div></div></div>
+  <div class="row" style="margin-bottom:2px;"><div class="row-label hl" style="font-size:10px;">Competitors<span>vs Perpl State above</span></div><div style="flex:1;"><div style="display:flex;align-items:center;gap:4px;"><div style="flex:1;height:16px;border-radius:3px;background:var(--color-background-secondary);border:1px solid #e0000066;position:relative;overflow:hidden;"><div class="q-seg" style="left:4.17%;width:83.33%;background:#4c7a34;opacity:0.55;" data-s="Competitors — exchange hours" data-t="01:00–21:00 UTC" data-b="Adequate during exchange hours but rely on 11 Pyth publishers, Chainlink heartbeat. No Oman." data-badge="Adequate — exchange hours only" data-c="#4c7a34"></div><div class="q-seg" style="left:0%;width:4.17%;background:#ef4444;opacity:0.85;border-radius:3px 0 0 3px;" data-s="Competitors — dark (Brent gap)" data-t="23:00–01:00 UTC" data-b="Stale, reduce-only or frozen." data-badge="Stale / frozen" data-c="#ef4444"></div><div class="q-seg" style="left:87.5%;width:4.17%;background:#ef4444;opacity:0.85;" data-s="Competitors — dark (CME break)" data-t="21:00–22:00 UTC" data-b="Lighter freezes, Ostium suspends, Pyth goes stale." data-badge="Frozen / suspended" data-c="#ef4444"></div><div class="q-seg" style="left:91.67%;width:8.33%;background:#b45309;opacity:0.7;border-radius:0 3px 3px 0;" data-s="Competitors — degraded" data-t="22:00–24:00 UTC" data-b="Thin publishers, low volume." data-badge="Degraded" data-c="#b45309"></div></div></div></div></div>
+  <div class="row" style="margin-top:4px;"><div class="row-label hl" style="font-size:10px;">IM multiplier</div><div class="bar-track perpl-track" style="height:18px;"><div class="seg" style="left:0%;width:4.17%;background:#ca8a04;opacity:0.8;border-radius:4px 0 0 4px;height:100%;" data-s="IM ×1.2 — Brent gap" data-t="00:00–01:00" data-b="Brent gap." data-badge="1.2×" data-c="#ca8a04"><span class="seg-label" style="font-size:9px;">1.2×</span></div><div class="seg" style="left:4.17%;width:83.33%;background:#16a34a;opacity:0.65;height:100%;" data-s="IM ×1.0 — base" data-t="01:00–21:00" data-b="All exchanges open. Base margin." data-badge="1.0× base" data-c="#16a34a"><span class="seg-label" style="font-size:9px;padding:0 6px;">1.0× base</span></div><div class="seg" style="left:54.17%;width:16.67%;background:#22c55e;opacity:0.8;height:100%;" data-s="IM ×1.0 — peak" data-t="13:00–17:00" data-b="Peak quality." data-badge="1.0× peak" data-c="#22c55e"></div><div class="seg" style="left:87.5%;width:4.17%;background:#dc2626;opacity:0.8;height:100%;" data-s="IM ×1.5 — R3" data-t="21:00–22:00" data-b="CME break. Surcharge." data-badge="1.5×" data-c="#dc2626"><span class="seg-label" style="font-size:9px;">1.5×</span></div><div class="seg" style="left:91.67%;width:4.17%;background:#16a34a;opacity:0.65;height:100%;" data-s="IM ×1.0 — recovered" data-t="22:00–23:00" data-b="CME reopens." data-badge="1.0×" data-c="#16a34a"></div><div class="seg" style="left:95.83%;width:4.17%;background:#ca8a04;opacity:0.8;border-radius:0 4px 4px 0;height:100%;" data-s="IM ×1.2 — Brent gap" data-t="23:00–24:00" data-b="Brent gap begins." data-badge="1.2×" data-c="#ca8a04"><span class="seg-label" style="font-size:9px;">1.2×</span></div></div></div>
   <div style="position:relative;height:30px;margin-top:4px;" id="events-wd"></div>
 </div>
 
 <!-- WEEKEND -->
 <div class="panel" id="panel-weekend">
-  <div class="weekend-note"><strong>All traditional exchanges closed.</strong> Fri 21:00 to Sun 22:00 UTC (~49 hours). No WTI, Brent, or Oman data. No physical benchmarks. The entire industry converges on one thin source.</div>
+  <div class="weekend-note"><strong>All traditional exchanges closed.</strong> Fri 21:00 → Sun 22:00 UTC (~49 hours). No WTI, Brent, or Oman data. No physical benchmarks. The entire industry converges on one thin source.</div>
   <div class="hour-axis" id="axis-we"></div>
-
   <div class="section-divider"><hr><span>Exchange feeds</span><hr></div>
-  <div class="row">
-    <div class="row-label">WTI (CME)<span>NYMEX CL</span></div>
-    <div class="bar-track"><div class="seg" style="left:0%;width:100%;background:#222;border-radius:4px;" data-s="WTI: Closed all weekend" data-t="All weekend" data-b="CME fully closed. No WTI price discovery. 0 contracts." data-badge="Closed: 0 exchange data" data-c="#555"><span class="seg-label" style="color:rgba(255,255,255,0.3);padding:0 6px;">Closed all weekend</span></div></div>
-  </div>
-  <div class="row">
-    <div class="row-label">Brent (ICE)<span>ICE Europe</span></div>
-    <div class="bar-track"><div class="seg" style="left:0%;width:100%;background:#222;border-radius:4px;" data-s="Brent: Closed all weekend" data-t="All weekend" data-b="ICE Futures Europe closed. No Brent trading, no settlement, no EFP." data-badge="Closed: 0 exchange data" data-c="#555"><span class="seg-label" style="color:rgba(255,255,255,0.3);padding:0 6px;">Closed all weekend</span></div></div>
-  </div>
-  <div class="row">
-    <div class="row-label">Oman (GME)<span>via Globex</span></div>
-    <div class="bar-track"><div class="seg" style="left:0%;width:100%;background:#222;border-radius:4px;" data-s="Oman: Closed all weekend" data-t="All weekend" data-b="GME closed alongside CME Globex. No Oman marker. No physical delivery pricing." data-badge="Closed: 0 exchange data" data-c="#555"><span class="seg-label" style="color:rgba(255,255,255,0.3);padding:0 6px;">Closed all weekend</span></div></div>
-  </div>
-
+  <div class="row"><div class="row-label">WTI (CME)<span>NYMEX CL</span></div><div class="bar-track"><div class="seg" style="left:0%;width:100%;background:#222;border-radius:4px;" data-s="WTI — Closed all weekend" data-t="All weekend" data-b="CME fully closed. No WTI price discovery. 0 contracts." data-badge="Closed — 0 exchange data" data-c="#555"><span class="seg-label" style="color:rgba(255,255,255,0.3);padding:0 6px;">Closed all weekend</span></div></div></div>
+  <div class="row"><div class="row-label">Brent (ICE)<span>ICE Europe</span></div><div class="bar-track"><div class="seg" style="left:0%;width:100%;background:#222;border-radius:4px;" data-s="Brent — Closed all weekend" data-t="All weekend" data-b="ICE Futures Europe closed. No Brent trading." data-badge="Closed — 0 exchange data" data-c="#555"><span class="seg-label" style="color:rgba(255,255,255,0.3);padding:0 6px;">Closed all weekend</span></div></div></div>
+  <div class="row"><div class="row-label">Oman (GME)<span>via Globex</span></div><div class="bar-track"><div class="seg" style="left:0%;width:100%;background:#222;border-radius:4px;" data-s="Oman — Closed all weekend" data-t="All weekend" data-b="GME closed alongside CME Globex. No Oman marker." data-badge="Closed — 0 exchange data" data-c="#555"><span class="seg-label" style="color:rgba(255,255,255,0.3);padding:0 6px;">Closed all weekend</span></div></div></div>
   <div class="section-divider"><hr><span>Physical benchmarks</span><hr></div>
-  <div class="row">
-    <div class="row-label">Dubai/Oman MOC<span>Platts, Singapore</span></div>
-    <div class="bar-track"><div class="seg" style="left:0%;width:100%;background:#222;border-radius:4px;" data-s="Dubai/Oman MOC: not published" data-t="All weekend" data-b="Platts MOC does not run on weekends. No physical anchor for the state vector." data-badge="No publication: weekend" data-c="#555"><span class="seg-label" style="color:rgba(255,255,255,0.3);padding:0 6px;">Not published</span></div></div>
-  </div>
-  <div class="row">
-    <div class="row-label">Dated Brent MOC<span>Platts, London</span></div>
-    <div class="bar-track"><div class="seg" style="left:0%;width:100%;background:#222;border-radius:4px;" data-s="Dated Brent MOC: not published" data-t="All weekend" data-b="No MOC on weekends. The benchmark pricing 70% of world crude does not update." data-badge="No publication: weekend" data-c="#555"><span class="seg-label" style="color:rgba(255,255,255,0.3);padding:0 6px;">Not published</span></div></div>
-  </div>
-
+  <div class="row"><div class="row-label">Dubai/Oman MOC</div><div class="bar-track"><div class="seg" style="left:0%;width:100%;background:#222;border-radius:4px;" data-s="Dubai/Oman MOC — not published" data-t="All weekend" data-b="Platts MOC does not run on weekends." data-badge="No publication" data-c="#555"><span class="seg-label" style="color:rgba(255,255,255,0.3);padding:0 6px;">Not published</span></div></div></div>
+  <div class="row"><div class="row-label">Dated Brent MOC</div><div class="bar-track"><div class="seg" style="left:0%;width:100%;background:#222;border-radius:4px;" data-s="Dated Brent MOC — not published" data-t="All weekend" data-b="No MOC on weekends. Benchmark pricing 70% of world crude does not update." data-badge="No publication" data-c="#555"><span class="seg-label" style="color:rgba(255,255,255,0.3);padding:0 6px;">Not published</span></div></div></div>
   <div class="section-divider"><hr><span>Oracle feeds</span><hr></div>
-  <div class="row">
-    <div class="row-label">Chainlink<span>~24h heartbeat</span></div>
-    <div class="bar-track"><div class="seg" style="left:0%;width:100%;background:#1a4480;opacity:0.45;border-radius:4px;" data-s="Chainlink: weekend (stale anchor)" data-t="All weekend" data-b="Updates on ~24h heartbeat only. Anchors to last weekday close. No meaningful price discovery." data-badge="Heartbeat only: stale reference" data-c="#1a4480"><span class="seg-label" style="font-size:9px;padding:0 6px;">Anchors to last close</span></div></div>
-  </div>
-  <div class="row">
-    <div class="row-label">Pyth standard<span>11 WTI / 8 Brent</span></div>
-    <div class="bar-track"><div class="seg" style="left:0%;width:100%;background:#164e63;opacity:0.3;border-radius:4px;" data-s="Pyth standard: stale all weekend" data-t="All weekend" data-b="All standard feeds stale without exchange data. No real price discovery." data-badge="Stale all weekend" data-c="#b45309"><span class="seg-label" style="font-size:9px;color:rgba(255,255,255,0.35);padding:0 6px;">Stale all weekend</span></div></div>
-  </div>
-  <div class="row">
-    <div class="row-label">Pyth 24/7<span>Launched Mar 2026</span></div>
-    <div class="bar-track"><div class="seg" style="left:0%;width:100%;background:#0e6f85;opacity:0.5;border-radius:4px;" data-s="Pyth 24/7: weekend (HL-sourced)" data-t="All weekend" data-b="Technically active but shifts entirely to onchain (Hyperliquid). Same thin HL book as every other solution. Not an independent signal." data-badge="Active: but same thin HL book as everyone" data-c="#0e6f85"><span class="seg-label" style="font-size:9px;padding:0 8px;">Active: entirely onchain sourced</span></div></div>
-  </div>
-
+  <div class="row"><div class="row-label">Chainlink<span>~24h heartbeat</span></div><div class="bar-track"><div class="seg" style="left:0%;width:100%;background:#1a4480;opacity:0.45;border-radius:4px;" data-s="Chainlink — weekend (stale anchor)" data-t="All weekend" data-b="Updates on ~24h heartbeat only. Anchors to last weekday close. No meaningful price discovery." data-badge="Heartbeat only — stale" data-c="#1a4480"><span class="seg-label" style="font-size:9px;padding:0 6px;">Anchors to last close</span></div></div></div>
+  <div class="row"><div class="row-label">Pyth standard<span>11 WTI / 8 Brent</span></div><div class="bar-track"><div class="seg" style="left:0%;width:100%;background:#164e63;opacity:0.3;border-radius:4px;" data-s="Pyth standard — stale all weekend" data-t="All weekend" data-b="All standard feeds stale. No exchange source." data-badge="Stale all weekend" data-c="#b45309"><span class="seg-label" style="font-size:9px;color:rgba(255,255,255,0.35);padding:0 6px;">Stale all weekend</span></div></div></div>
+  <div class="row"><div class="row-label">Pyth 24/7<span>Launched Mar 2026</span></div><div class="bar-track"><div class="seg" style="left:0%;width:100%;background:#0e6f85;opacity:0.5;border-radius:4px;" data-s="Pyth 24/7 — weekend (HL-sourced)" data-t="All weekend" data-b="Technically active but shifts entirely to Hyperliquid. Same thin book as everyone else." data-badge="Active — same thin HL book as everyone" data-c="#0e6f85"><span class="seg-label" style="font-size:9px;padding:0 8px;">Active — entirely onchain sourced</span></div></div></div>
   <div class="onchain-divider"><hr><span>Onchain venues (L3)</span><hr></div>
-  <div class="row">
-    <div class="row-label">Hyperliquid<span>The only game in town</span></div>
-    <div class="bar-track"><div class="seg" style="left:0%;width:100%;background:#c0392b;border-radius:4px;" data-s="Hyperliquid: sole price discovery (weekend)" data-t="All weekend" data-b="The only active trading venue globally for oil. Weekend volume $500M-$1.4B/day. Median trade $543. Pyth 24/7, Chainlink, and every other oracle ultimately reference this single source." data-badge="Sole price discovery: $543 median trade" data-c="#c0392b"><span class="seg-label" style="padding:0 6px;">Sole active venue: $500M-$1.4B weekend vol</span></div></div>
-  </div>
-  <div class="row">
-    <div class="row-label">Lighter<span>Frozen</span></div>
-    <div class="bar-track"><div class="seg" style="left:0%;width:100%;background:#2a1f08;border-radius:4px;" data-s="Lighter: frozen all weekend" data-t="All weekend" data-b="Reduce-only from CME close Friday. Index frozen. No new positions." data-badge="Frozen all weekend" data-c="#b45309"><span class="seg-label" style="font-size:9px;color:rgba(255,255,255,0.35);padding:0 6px;">Frozen all weekend</span></div></div>
-  </div>
-  <div class="row">
-    <div class="row-label">Ostium<span>Suspended</span></div>
-    <div class="bar-track"><div class="seg" style="left:0%;width:100%;background:#1a0505;border-radius:4px;" data-s="Ostium: suspended all weekend" data-t="All weekend" data-b="Fully suspends trading when CME closes. No trading at all." data-badge="Fully suspended: no trading" data-c="#dc2626"><span class="seg-label" style="font-size:9px;color:rgba(255,255,255,0.35);padding:0 6px;">Fully suspended</span></div></div>
-  </div>
-
+  <div class="row"><div class="row-label">Hyperliquid<span>trade.xyz · HIP-3</span></div><div class="bar-track"><div class="seg" style="left:0%;width:100%;background:#c0392b;border-radius:4px;" data-s="Hyperliquid / trade.xyz — sole price discovery" data-t="All weekend" data-b="Only active trading venue globally for oil. Weekend volume $500M–$1.4B/day. Median trade $543. Pyth 24/7, Chainlink, and every other oracle ultimately reference this single source." data-badge="Sole price discovery — $543 median trade" data-c="#c0392b"><span class="seg-label" style="padding:0 6px;">Sole active venue — $500M–$1.4B weekend vol</span></div></div></div>
+  <div class="row"><div class="row-label">Lighter<span>Frozen</span></div><div class="bar-track"><div class="seg" style="left:0%;width:100%;background:#2a1f08;border-radius:4px;" data-s="Lighter — frozen all weekend" data-t="All weekend" data-b="Reduce-only from CME close Friday. Index frozen. No new positions." data-badge="Frozen all weekend" data-c="#b45309"><span class="seg-label" style="font-size:9px;color:rgba(255,255,255,0.35);padding:0 6px;">Frozen all weekend</span></div></div></div>
+  <div class="row"><div class="row-label">Ostium<span>Suspended</span></div><div class="bar-track"><div class="seg" style="left:0%;width:100%;background:#1a0505;border-radius:4px;" data-s="Ostium — suspended all weekend" data-t="All weekend" data-b="Fully suspends when CME closes. No trading at all." data-badge="Fully suspended" data-c="#dc2626"><span class="seg-label" style="font-size:9px;color:rgba(255,100,100,0.4);padding:0 6px;">Fully suspended</span></div></div></div>
   <div class="perpl-divider"><hr><span>Perpl custom oracle</span><hr></div>
-  <div class="row">
-    <div class="row-label hl">State vector<span>R4 Dark, still open</span></div>
-    <div class="bar-track perpl-track" style="height:28px;">
-      <div class="seg" style="left:0%;width:100%;background:#ca8a04;border-radius:4px;height:100%;" data-s="Perpl: R4 Dark (full weekend)" data-t="All weekend (Fri 21:00 to Sun 22:00 UTC)" data-b="All exchanges closed. R4 Dark. Sources: HL L3 (primary), Pyth 24/7 (redundancy check), Chainlink heartbeat (stale anchor), attested MM quotes (EIP-712 signed). OI caps halved. Market stays open." data-badge="R4 Dark: market open" data-c="#ca8a04"><span class="seg-label" style="padding:0 8px;">R4 Dark: conservative marks, market stays open</span></div>
-    </div>
-  </div>
-  <div class="row" style="margin-bottom:2px;">
-    <div class="row-label hl" style="font-size:10px;">Quality vs others<span>weekend</span></div>
-    <div style="flex:1;">
-      <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px;">
-        <div style="font-size:9px;color:var(--color-text-tertiary);width:52px;flex-shrink:0;text-align:right;">Others</div>
-        <div style="flex:1;height:10px;border-radius:3px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);position:relative;overflow:hidden;">
-          <div class="q-seg" style="left:0%;width:100%;background:#ef4444;opacity:0.55;border-radius:3px;" data-s="Competitors: dark all weekend" data-t="All weekend" data-b="Frozen, suspended, or all referencing one thin source with no independent signals." data-badge="Dark / frozen / sole-source all weekend" data-c="#ef4444"></div>
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:4px;">
-        <div style="font-size:9px;color:#16a34a;width:52px;flex-shrink:0;text-align:right;font-weight:500;">Perpl</div>
-        <div style="flex:1;height:14px;border-radius:3px;background:rgba(22,163,74,0.08);border:0.5px solid rgba(22,163,74,0.3);position:relative;overflow:hidden;">
-          <div class="q-seg" style="left:0%;width:100%;background:#ca8a04;border-radius:3px;" data-s="Perpl quality: R4 Dark" data-t="All weekend" data-b="R4 Dark. Conservative but open. Attested MM quotes supplement HL L3." data-badge="R4 Dark: still trading" data-c="#ca8a04"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="row" style="margin-top:4px;">
-    <div class="row-label hl" style="font-size:10px;">IM multiplier</div>
-    <div class="bar-track perpl-track" style="height:18px;">
-      <div class="seg" style="left:0%;width:100%;background:#dc2626;opacity:0.8;border-radius:4px;height:100%;" data-s="IM x2-3x: R4 Dark (all weekend)" data-t="All weekend" data-b="R4 Dark. IM x2-3x. OI caps halved. Margin reflects genuine uncertainty. Competitors are simply closed." data-badge="2-3x base IM, OI caps x0.5" data-c="#dc2626"><span class="seg-label" style="font-size:9px;padding:0 6px;">2-3x IM, OI caps halved</span></div>
-    </div>
-  </div>
+  <div class="row"><div class="row-label hl">Perpl State<span>R4 Dark · still open</span></div><div class="bar-track perpl-track" style="height:28px;"><div class="seg" style="left:0%;width:100%;background:#ca8a04;border-radius:4px;height:100%;" data-s="Perpl — R4 Dark (full weekend)" data-t="All weekend" data-b="All exchanges closed. R4 Dark. Sources: HL L3 (primary), Pyth 24/7 (redundancy check), Chainlink heartbeat (stale anchor), attested MM quotes (EIP-712). σ ×5.0, IM ×2–3×, OI caps halved. Market stays open." data-badge="R4 Dark · σ ×5.0 · IM ×2–3× · market open" data-c="#ca8a04"><span class="seg-label" style="padding:0 8px;">R4 Dark — conservative marks · market stays open</span></div></div></div>
+  <div class="row" style="margin-bottom:2px;"><div class="row-label hl" style="font-size:10px;">Competitors<span>vs Perpl State above</span></div><div style="flex:1;"><div style="display:flex;align-items:center;gap:4px;"><div style="flex:1;height:16px;border-radius:3px;background:var(--color-background-secondary);border:1px solid #e0000066;position:relative;overflow:hidden;"><div class="q-seg" style="left:0%;width:100%;background:#ef4444;opacity:0.55;border-radius:3px;" data-s="Competitors — dark all weekend" data-t="All weekend" data-b="Frozen, suspended, or all referencing one thin source." data-badge="Dark / frozen / sole-source" data-c="#ef4444"></div></div></div></div></div>
+  <div class="row" style="margin-top:4px;"><div class="row-label hl" style="font-size:10px;">IM multiplier</div><div class="bar-track perpl-track" style="height:18px;"><div class="seg" style="left:0%;width:100%;background:#dc2626;opacity:0.8;border-radius:4px;height:100%;" data-s="IM ×2–3× — R4 Dark" data-t="All weekend" data-b="R4 Dark. IM ×2–3×. OI caps halved. Competitors are simply closed." data-badge="2–3× base IM · OI caps ×0.5" data-c="#dc2626"><span class="seg-label" style="font-size:9px;padding:0 6px;">2–3× IM · OI caps halved</span></div></div></div>
 </div>
 
 <script>
-  ['wd','we'].forEach(function(id) {
-    var ax = document.getElementById('axis-' + id);
-    if (!ax) return;
-    for (var h = 0; h < 24; h++) {
-      var t = document.createElement('div');
-      t.className = 'hour-tick';
-      t.textContent = h % 3 === 0 ? String(h).padStart(2,'0') + ':00' : '';
-      ax.appendChild(t);
-    }
+['wd','we'].forEach(id => {
+  const ax = document.getElementById('axis-' + id);
+  if (!ax) return;
+  for (let h = 0; h < 24; h++) {
+    const t = document.createElement('div');
+    t.className = 'hour-tick';
+    t.textContent = h % 3 === 0 ? String(h).padStart(2,'0') + ':00' : '';
+    ax.appendChild(t);
+  }
+});
+const evWd = document.getElementById('events-wd');
+[{p:33.33,l:'Oman MOC',c:'#d97706'},{p:56.25,l:'EIA Wed',c:'#92400e'},{p:66.67,l:'Brent MOC',c:'#b45309'},{p:80.56,l:'ICE settle',c:'#be8a2d'},{p:87.5,l:'CME break',c:'#ef4444'}]
+.forEach(p => {
+  const pin = document.createElement('div');
+  pin.className = 'event-pin'; pin.style.left = p.p + '%';
+  pin.innerHTML = `<span class="edot" style="background:${p.c};"></span><span class="elabel" style="color:${p.c};">${p.l}</span>`;
+  evWd.appendChild(pin);
+});
+const tt = document.getElementById('tt');
+function showInfo(seg, e) {
+  const src=seg.dataset.s||'',time=seg.dataset.t||'',body=seg.dataset.b||'',badge=seg.dataset.badge||'',color=seg.dataset.c||'#888';
+  document.getElementById('tt-head').textContent=src;
+  document.getElementById('tt-head').style.color=color;
+  document.getElementById('tt-sub').textContent=time;
+  document.getElementById('tt-body-text').textContent=body;
+  const badgeEl=document.getElementById('tt-badge');
+  badgeEl.textContent=badge; badgeEl.style.background=color+'22'; badgeEl.style.color=color;
+  document.getElementById('tt-vol-rows').style.display='none';
+  document.getElementById('tt-vol-total').style.display='none';
+  tt.style.borderColor=color+'88';
+  moveTT(e); tt.classList.add('show');
+}
+function showVolInfo(h,e) {
+  const sessions=['Asian','Asian','Asian','Asian','Asian','Asian','Asian','Asian','London','London','London','London','London','London-NY Peak','London-NY Peak','London-NY Peak','London-NY Peak','NY PM','NY PM','NY PM','NY PM','Break','Reopen','Reopen'];
+  document.getElementById('tt-head').textContent=String(h).padStart(2,'0')+':00–'+String(h+1).padStart(2,'0')+':00 UTC';
+  document.getElementById('tt-head').style.color='#fff';
+  document.getElementById('tt-sub').textContent=sessions[h]||'';
+  document.getElementById('tt-body-text').textContent='';
+  document.getElementById('tt-badge').textContent='';
+  document.getElementById('tt-vol-total').style.display='flex';
+  document.getElementById('tt-total-val').textContent=fmtV(totalsV[h]);
+  const rows=[{l:'WTI (CME)',v:wtiV[h],c:'#2563a8'},{l:'Brent (ICE)',v:brentV[h],c:'#1e7a5a'},{l:'Oman/OQD',v:omanV[h],c:'#7c3aad'},{l:'Dated Brent MOC',v:bdMOC[h],c:'#b45309'},{l:'Dubai/Oman MOC',v:duMOC[h],c:'#d97706'},{l:'HL / trade.xyz',v:hlV[h],c:'#c0392b'}].filter(r=>r.v>0);
+  const re=document.getElementById('tt-vol-rows');
+  re.innerHTML=''; re.style.display='block';
+  rows.forEach(r=>{
+    const d=document.createElement('div'); d.className='tt-row';
+    d.innerHTML=`<span class="tt-lbl"><span style="display:inline-block;width:7px;height:7px;border-radius:2px;background:${r.c};margin-right:5px;"></span>${r.l}</span><span class="tt-val">${fmtV(r.v)}</span>`;
+    re.appendChild(d);
   });
-
-  var eventsWd = document.getElementById('events-wd');
-  if (eventsWd) {
-    var pins = [
-      { pct: 33.33, label: 'Oman MOC',  color: '#d97706' },
-      { pct: 56.25, label: 'EIA Wed',   color: '#92400e' },
-      { pct: 66.67, label: 'Brent MOC', color: '#b45309' },
-      { pct: 80.56, label: 'ICE settle',color: '#be8a2d' },
-      { pct: 87.5,  label: 'CME break', color: '#ef4444' },
-    ];
-    pins.forEach(function(p) {
-      var pin = document.createElement('div');
-      pin.className = 'event-pin';
-      pin.style.left = p.pct + '%';
-      pin.innerHTML = '<span class="edot" style="background:'+p.color+';"></span><span class="elabel" style="color:'+p.color+';">'+p.label+'</span>';
-      eventsWd.appendChild(pin);
-    });
-  }
-
-  var tt       = document.getElementById('tooltip');
-  var ttSource = document.getElementById('tt-source');
-  var ttTime   = document.getElementById('tt-time');
-  var ttBody   = document.getElementById('tt-body');
-  var ttBadge  = document.getElementById('tt-badge');
-
-  function showInfo(seg, e) {
-    ttSource.textContent = seg.dataset.s || '';
-    ttSource.style.color = seg.dataset.c || '#888';
-    ttTime.textContent   = seg.dataset.t || '';
-    ttBody.textContent   = seg.dataset.b || '';
-    ttBadge.textContent  = seg.dataset.badge || '';
-    ttBadge.style.background = (seg.dataset.c || '#888') + '22';
-    ttBadge.style.color      = seg.dataset.c || '#888';
-    tt.style.borderColor     = (seg.dataset.c || '#888') + '88';
-    positionTooltip(e);
-    tt.classList.add('visible');
-  }
-
-  function positionTooltip(e) {
-    var pad = 14;
-    var w = tt.offsetWidth || 300;
-    var h = tt.offsetHeight || 120;
-    var x = e.clientX + pad;
-    var y = e.clientY + pad;
-    if (x + w > window.innerWidth - 8)  x = e.clientX - w - pad;
-    if (y + h > window.innerHeight - 8) y = e.clientY - h - pad;
-    tt.style.left = x + 'px';
-    tt.style.top  = y + 'px';
-  }
-
-  function hideInfo() { tt.classList.remove('visible'); }
-
-  function bindSegs() {
-    document.querySelectorAll('.seg, .q-seg').forEach(function(seg) {
-      seg.onmouseenter = function(e) { showInfo(seg, e); };
-      seg.onmousemove  = function(e) { positionTooltip(e); };
-      seg.onmouseleave = hideInfo;
-    });
-  }
-
-  function switchTab(tab, el) {
-    document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
-    document.querySelectorAll('.panel').forEach(function(p) { p.classList.remove('active'); });
-    el.classList.add('active');
-    document.getElementById('panel-' + tab).classList.add('active');
-    bindSegs();
-    hideInfo();
-  }
+  tt.style.borderColor='#3b82f688';
+  moveTT(e); tt.classList.add('show');
+}
+function moveTT(e) {
+  const pad=14,w=tt.offsetWidth||280,h=tt.offsetHeight||140;
+  let x=e.clientX+pad,y=e.clientY+pad;
+  if(x+w>window.innerWidth-8) x=e.clientX-w-pad;
+  if(y+h>window.innerHeight-8) y=e.clientY-h-pad;
+  tt.style.left=x+'px'; tt.style.top=y+'px';
+}
+function hideTT() { tt.classList.remove('show'); }
+function bindSegs() {
+  document.querySelectorAll('.seg,.q-seg').forEach(seg=>{
+    seg.onmouseenter=e=>showInfo(seg,e);
+    seg.onmousemove=e=>moveTT(e);
+    seg.onmouseleave=hideTT;
+  });
+  document.querySelectorAll('.vol-col').forEach(col=>{
+    col.onmouseenter=e=>showVolInfo(parseInt(col.dataset.h),e);
+    col.onmousemove=e=>moveTT(e);
+    col.onmouseleave=hideTT;
+  });
+}
+function switchTab(tab,el) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('panel-'+tab).classList.add('active');
+  const volBtn=document.getElementById('vol-btn');
+  if(tab==='weekend'){
+    volBtn.classList.add('disabled');
+    if(volOpen){ volOpen=false; document.getElementById('vol-section').classList.remove('open'); volBtn.classList.remove('active'); }
+  } else { volBtn.classList.remove('disabled'); }
   bindSegs();
+}
+const wtiShape=[1.2,1.0,0.9,0.9,1.1,1.3,1.6,2.0,2.8,3.5,4.2,4.8,5.0,7.5,9.0,8.5,7.0,5.5,4.8,4.2,3.5,3.2,0,1.5];
+const brentShape=[0,0.8,0.9,1.0,1.1,1.3,1.5,1.8,3.2,4.0,5.0,5.8,6.2,8.0,9.5,9.0,7.5,6.0,5.5,4.8,3.5,2.8,0,0];
+const omanShape=[0.5,0.4,0.4,0.4,0.5,0.6,0.7,0.8,12.0,1.0,0.8,0.7,0.7,1.0,0.9,0.8,0.8,0.9,0.9,10.0,1.0,0,0,0.5];
+const hlShape=[0.04,0.04,0.03,0.03,0.04,0.04,0.04,0.04,0.05,0.06,0.07,0.07,0.08,0.10,0.12,0.11,0.09,0.07,0.06,0.05,0.04,0.04,0.03,0.04];
+const bdMOC=Array(24).fill(0); bdMOC[15]=1.5; bdMOC[16]=1.0;
+const duMOC=Array(24).fill(0); duMOC[8]=0.8;
+function normVol(arr,total){const s=arr.reduce((a,b)=>a+b,0);return arr.map(v=>s>0?v/s*total:0);}
+const wtiV=normVol(wtiShape,144);
+const brentV=normVol(brentShape,108);
+const omanV=normVol(omanShape,0.32);
+const hlV=hlShape;
+const totalsV=Array.from({length:24},(_,h)=>wtiV[h]+brentV[h]+omanV[h]+hlV[h]+bdMOC[h]+duMOC[h]);
+const maxV=Math.max(...totalsV);
+function fmtV(v){if(v>=1)return '$'+v.toFixed(1)+'B';if(v>=0.01)return '$'+Math.round(v*1000)+'M';return '<$1M';}
+const VCOLS={wti:'#2563a8',brent:'#1e7a5a',oman:'#7c3aad',bdMOC:'#b45309',duMOC:'#d97706',hl:'#c0392b'};
+function buildVol(){
+  const H=140,steps=4;
+  const ya=document.getElementById('vol-yaxis'); ya.innerHTML='';
+  const gl=document.getElementById('vol-gridlines'); gl.innerHTML='';
+  for(let i=steps;i>=0;i--){
+    const d=document.createElement('div'); d.className='vol-ylabel';
+    d.textContent=fmtV(maxV*i/steps); ya.appendChild(d);
+    const g=document.createElement('div'); g.className='vol-gridline';
+    g.style.top=(H*(1-i/steps))+'px'; gl.appendChild(g);
+  }
+  const bc=document.getElementById('vol-bars'); bc.innerHTML='';
+  for(let h=0;h<24;h++){
+    const col=document.createElement('div'); col.className='vol-col'; col.dataset.h=h;
+    [{v:hlV[h],c:VCOLS.hl},{v:duMOC[h],c:VCOLS.duMOC},{v:bdMOC[h],c:VCOLS.bdMOC},{v:omanV[h],c:VCOLS.oman},{v:brentV[h],c:VCOLS.brent},{v:wtiV[h],c:VCOLS.wti}]
+      .forEach(l=>{
+        if(l.v<=0) return;
+        const s=document.createElement('div'); s.className='vol-seg';
+        s.style.height=Math.max(l.v/maxV*H,1)+'px'; s.style.background=l.c;
+        col.appendChild(s);
+      });
+    bc.appendChild(col);
+  }
+  const xa=document.getElementById('vol-xaxis'); xa.innerHTML='';
+  for(let h=0;h<24;h++){
+    const d=document.createElement('div'); d.className='vol-xlabel';
+    d.textContent=h%3===0?String(h).padStart(2,'0'):''; xa.appendChild(d);
+  }
+  const leg=document.getElementById('vol-legend'); leg.innerHTML='';
+  [{l:'WTI (CME)',c:VCOLS.wti},{l:'Brent (ICE)',c:VCOLS.brent},{l:'Oman/OQD',c:VCOLS.oman},{l:'Dated Brent MOC',c:VCOLS.bdMOC},{l:'Dubai/Oman MOC',c:VCOLS.duMOC},{l:'HL / trade.xyz HIP-3',c:VCOLS.hl}]
+    .forEach(item=>{
+      const d=document.createElement('div'); d.className='vol-li';
+      d.innerHTML=`<div class="vol-dot" style="background:${item.c};"></div>${item.l}`;
+      leg.appendChild(d);
+    });
+  bindSegs();
+}
+let volOpen=false;
+function toggleVol(){
+  volOpen=!volOpen;
+  const sec=document.getElementById('vol-section');
+  const btn=document.getElementById('vol-btn');
+  sec.classList.toggle('open',volOpen);
+  btn.classList.toggle('active',volOpen);
+  if(volOpen) buildVol();
+}
+bindSegs();
 </script>
 </body>
 </html>
